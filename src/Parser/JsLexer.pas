@@ -2,7 +2,7 @@ unit JsLexer;
 
 interface
 
-uses Classes;
+uses Classes, JsStringUtils;
 
 type
 	
@@ -279,8 +279,9 @@ end;
 
 
 procedure TJsTokenWorker.Once( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var fToken : TJsTokenNode;
 begin
-
+	fToken := fTokenWorker(self.mInput);
 end;
 
 procedure TJsTokenWorker.Once( fTokenWorker : TJsFuncTokenNodeWorker );
