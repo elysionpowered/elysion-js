@@ -86,9 +86,17 @@ end;
 function drop( Str : String; Len : Integer ): String;
 	function _subDrop( _str : String; _len : Integer; _work : String ): String;
 	begin
+	        if (_str = '') then begin
+	                result := _work;
+                        exit;
+	        end;
 		if (_len = 0) and (_str = '' ) then begin
 			result := _work;
 			exit;
+		end;
+		if (_len = 0 ) then begin
+		        result := _work;
+		        exit;
 		end;
 		if (_len > 0 ) then
 			_subDrop( tail(_str), _len - 1, _work );

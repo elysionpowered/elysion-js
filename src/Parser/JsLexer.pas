@@ -16,6 +16,7 @@ type
 	    private
 	    
 	        mToken : String;
+	        mInput : String;
 	        mTokenId : Integer;
 	        mTokenType : TJsTokenType;
 	
@@ -31,6 +32,8 @@ type
 	
 	    published
 	    
+	    
+	        property Input : String read mInput write mInput;
 	        property Token : String read mToken;
 	        property TokenId : Integer read mTokenId;
 	        property TokenType : TJsTokenType read mTokenType;
@@ -88,47 +91,54 @@ type
 	        procedure Add( fString : String; fId : Integer; fType : TJsTokenType  );overload;
 	        
 	        procedure SetNode( fToken : TJsToken );
+	    
+	        function GetLeafs : TList;
+	        function GetToken : TJsToken;
+	        function GetInput : String;
+	        
+	     published
+	     
+	        property Input : String read mInput write mInput;
             
     end;
     
     TJsTokenNodeArray = Array of TJsTokenNode;
     
-	TJsTokenNodeList = class
-	    private
+    TJsTokenNodeList = class
+	private
 	        
-	        mTokens : TJsTokenNodeArray;
-	        mCount : Integer;
+	    mTokens : TJsTokenNodeArray;
+	    mCount : Integer;
 	        
-	    public
+	public
 	    
-	        constructor Create;
+	    constructor Create;
 	    
-	        procedure Add( fToken : TJsTokenNode );
-	        
-	        function GetArray : TJsTokenNodeArray;
+	    procedure Add( fToken : TJsTokenNode );        
+	    function GetArray : TJsTokenNodeArray;
+	    procedure Clear;
 	    
 	end;    
 	
-	TJsFuncRuleNode = function( fInput : String ): Boolean;
-	TJsFuncTokenNodeWorker = function( fInput : String ): TJsTokenNode;
+	
+    TJsFuncRuleNode = function( fInput : String ): Boolean;
+    TJsFuncTokenNodeWorker = function( fInput : String ): TJsTokenNode;
     
     TJsTokenWorker = class
-        private
+        protected
             
             mToken : TJsTokenNode;
             mInput : String;         
             mCurrentInput : String;
             
             mLogicalStack : TJsTokenNodeList;
-            
-            //USER DEFINED       
-            function Force : TJsTokenNode; virtual; abstract;
+            mNodes : TJsTokenNodeList;
             
             //procedure ThrowError ( fNode : TJsTokenNode ); 
             //procedure ThrowWarning( fNode : TJsTokenNode ); virtual; abstract;
             //procedure ThrowInfo( fNode : TJsTokenNode ); virtual; abstract;
             
-            //PARSIN
+            //PARSING
             procedure Apply( fNode : TJsTokenNode ); overload;
             
             procedure Many( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode );overload;
@@ -170,7 +180,9 @@ type
             procedure RangeOr( fRange : Integer; fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode );overload;
             procedure RangeOr( fRange : Integer; fTokenWorker : TJsFuncTokenNodeWorker ); overload;
             procedure RangeOr( fRange : Integer;  fTokenStringWorker : TJsFuncStringWorker ); overload;
-            procedure RangeOr( fRange : Integer;  fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode ); overload;     
+            procedure RangeOr( fRange : Integer;  fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode ); overload;   
+            
+            procedure Logic;  
         
             
             
@@ -182,7 +194,8 @@ type
             function Work( fInput : String ) : TJsTokenNode;overload;
             function Work() : TJsTokenNode;overload;
             
-            
+            //USER DEFINED       
+            function Parse : TJsTokenNode; virtual; abstract;            
         
     end;
 
@@ -198,166 +211,469 @@ implementation
 }
 
 procedure TJsTokenWorker.Range( fRange : Integer;   fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        Once(fTokenWorker,fRules);
+    end;
 end;
 
 procedure TJsTokenWorker.Range( fRange : Integer;   fTokenWorker : TJsFuncTokenNodeWorker );
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        Once(fTokenWorker);
+    end;
 end;
 
 procedure TJsTokenWorker.Range(fRange : Integer;   fTokenStringWorker : TJsFuncStringWorker);
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        Once(fTokenStringWorker);
+    end;
 end;
 
 procedure TJsTokenWorker.Range( fRange : Integer;   fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var I : Integer;
 begin
+    for I := 0 to fRange - 1 do begin
+        Once(fTokenStringWorker,fRules);
+    end;
 
 end;
 
 procedure TJsTokenWorker.RangeOr( fRange : Integer;   fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        OnceOr(fTokenWorker,fRules);
+    end;
 end;
 
 procedure TJsTokenWorker.RangeOr( fRange : Integer;   fTokenWorker : TJsFuncTokenNodeWorker );
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        OnceOr(fTokenWorker);
+    end;
 end;
 
 procedure TJsTokenWorker.RangeOr(fRange : Integer;   fTokenStringWorker : TJsFuncStringWorker);
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        OnceOr(fTokenStringWorker);
+    end;
 end;
 
 procedure TJsTokenWorker.RangeOr( fRange : Integer;   fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var I : Integer;
 begin
-
+    for I := 0 to fRange - 1 do begin
+        OnceOr(fTokenStringWorker,fRules);
+    end;
 end;
 
 procedure TJsTokenWorker.Twice( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var fToken,sToken : TJsTokenNode; 
 begin
-
+	if ( fRules(mCurrentInput) = True ) then begin
+	    fToken := fTokenWorker(mCurrentInput);
+	    mCurrentInput := fToken.GetInput;
+	    sToken := fTokenWorker(mCurrentInput);
+	    mCurrentInput := sToken.GetInput;
+	    fToken.Add(sToken);
+	    
+	    mToken.Input := mCurrentInput;
+	    mToken.Add(fToken);
+	end;
 end;
 
 procedure TJsTokenWorker.Twice( fTokenWorker : TJsFuncTokenNodeWorker );
+var fToken, sToken : TJsTokenNode; 
 begin
-
+	 fToken := fTokenWorker(mCurrentInput);
+	 mCurrentInput := fToken.GetInput;
+	 sToken := fTokenWorker(mCurrentInput);
+	 mCurrentInput := sToken.GetInput;
+	 fToken.Add(sToken);
+	 
+	 mToken.Input := mCurrentInput;	 
+	 mToken.Add(fToken);
 end;
 
 procedure TJsTokenWorker.Twice(fTokenStringWorker : TJsFuncStringWorker);
+var fToken, sToken : TJsTokenNode;  _token01, _token02 : TJsToken;
 begin
-
+	 _token01 := fTokenStringWorker(mCurrentInput);
+	 fToken := TJsTokenNode.Create(mCurrentInput);
+	 mCurrentInput := fToken.GetInput;
+	 sToken := TJsTokenNode.Create(mCurrentInput);
+	 _token02 := fTokenStringWorker(mCurrentInput);
+	 
+	 fToken.SetNode(_token01);
+	 sToken.SetNode(_token02);
+	 
+	 fToken.Add(sToken);
+	 mToken.Add(fToken);
+	 
+	 mToken.Input := mCurrentInput;
 end;
 
 procedure TJsTokenWorker.Twice( fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var fToken, sToken : TJsTokenNode;  _token01, _token02 : TJsToken;
 begin
+	if ( fRules(mCurrentInput) = True ) then begin
+	     _token01 := fTokenStringWorker(mCurrentInput);
+	     fToken := TJsTokenNode.Create(mCurrentInput);
+	     mCurrentInput := fToken.GetInput;
+	     sToken := TJsTokenNode.Create(mCurrentInput);
+	     _token02 := fTokenStringWorker(mCurrentInput);
+	     
+	     fToken.SetNode(_token01);
+	     sToken.SetNode(_token02);
+	     
+	     fToken.Add(sToken);
+	     mToken.Add(fToken);
+	     
+	     mToken.Input := mCurrentInput;
+	end; 
 
 end;
 
 procedure TJsTokenWorker.TwiceOr( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var fToken,sToken : TJsTokenNode; 
 begin
-
+	if ( fRules(mCurrentInput) = True ) then begin
+	    fToken := fTokenWorker(mCurrentInput);
+	    mCurrentInput := fToken.GetInput;
+	    sToken := fTokenWorker(mCurrentInput);
+	    mCurrentInput := sToken.GetInput;
+	    fToken.Add(sToken);
+	    
+	    mLogicalStack.Add(fToken);
+	end;
 end;
 
 procedure TJsTokenWorker.TwiceOr( fTokenWorker : TJsFuncTokenNodeWorker );
+var fToken, sToken : TJsTokenNode; 
 begin
-
+	 fToken := fTokenWorker(mCurrentInput);
+	 mCurrentInput := fToken.GetInput;
+	 sToken := fTokenWorker(mCurrentInput);
+	 mCurrentInput := sToken.GetInput;
+	 fToken.Add(sToken);
+	 
+	 mLogicalStack.Add(fToken);
 end;
 
 procedure TJsTokenWorker.TwiceOr(fTokenStringWorker : TJsFuncStringWorker);
+var fToken, sToken : TJsTokenNode;  _token01, _token02 : TJsToken;
 begin
-
+	 _token01 := fTokenStringWorker(mCurrentInput);
+	 fToken := TJsTokenNode.Create(mCurrentInput);
+	 mCurrentInput := fToken.GetInput;
+	 sToken := TJsTokenNode.Create(mCurrentInput);
+	 _token02 := fTokenStringWorker(mCurrentInput);
+	 
+	 fToken.SetNode(_token01);
+	 sToken.SetNode(_token02);
+	 
+	 fToken.Add(sToken);
+     mLogicalStack.Add(fToken);
 end;
 
 procedure TJsTokenWorker.TwiceOr( fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var fToken, sToken : TJsTokenNode;  _token01, _token02 : TJsToken;
 begin
-
+	if ( fRules(mCurrentInput) = True ) then begin
+	     _token01 := fTokenStringWorker(mCurrentInput);
+	     fToken := TJsTokenNode.Create(mCurrentInput);
+	     mCurrentInput := fToken.GetInput;
+	     sToken := TJsTokenNode.Create(mCurrentInput);
+	     _token02 := fTokenStringWorker(mCurrentInput);
+	     
+	     fToken.SetNode(_token01);
+	     sToken.SetNode(_token02);
+	     
+	     fToken.Add(sToken);
+	     mLogicalStack.Add(fToken);
+	end;
 end;
+
+
+////////////////////////////////////
 
 
 procedure TJsTokenWorker.Once( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
-var fToken : TJsTokenNode;
+var fToken : TJsTokenNode; 
 begin
-	fToken := fTokenWorker(self.mInput);
+	if ( fRules(mCurrentInput) = True ) then begin
+	    fToken := fTokenWorker(mCurrentInput);
+	    mCurrentInput := fToken.GetInput;
+	    mToken.Add(fToken);
+	    mToken.Input := mCurrentInput;
+	end;
 end;
 
 procedure TJsTokenWorker.Once( fTokenWorker : TJsFuncTokenNodeWorker );
+var fToken : TJsTokenNode; 
 begin
-
+    fToken := fTokenWorker(mCurrentInput);
+    mCurrentInput := fToken.GetInput;
+	mToken.Add(fToken);
+	mToken.Input := mCurrentInput;
 end;
 
 procedure TJsTokenWorker.Once(fTokenStringWorker : TJsFuncStringWorker);
+var fToken : TJsToken; 
 begin
-
+    fToken := fTokenStringWorker(mCurrentInput);
+    mCurrentInput := fToken.Input;
+	mToken.Add(fToken);
+	mToken.Input := mCurrentInput;
 end;
 
 procedure TJsTokenWorker.Once( fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var fToken : TJsToken; 
 begin
+	if ( fRules(mCurrentInput) = True ) then begin
+	    fToken := fTokenStringWorker(mCurrentInput);
+	    mToken.Add(fToken);
+	    mToken.Input := mCurrentInput;
+	end;
 
 end;
 
 procedure TJsTokenWorker.OnceOr( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var fToken : TJsTokenNode; 
 begin
-
+	if ( fRules(mCurrentInput) = True ) then begin
+	    fToken := fTokenWorker(mCurrentInput);
+	    mLogicalStack.Add(fToken);
+	end;
 end;
 
 procedure TJsTokenWorker.OnceOr( fTokenWorker : TJsFuncTokenNodeWorker );
+var fToken : TJsTokenNode; 
 begin
-
+    fToken := fTokenWorker(mCurrentInput);
+	mLogicalStack.Add(fToken);
 end;
 
 procedure TJsTokenWorker.OnceOr(fTokenStringWorker : TJsFuncStringWorker);
+var fToken : TJsToken; fNode : TJsTokenNode;
 begin
-
+    fToken := fTokenStringWorker(mCurrentInput);  
+    fNode := TJsTokenNode.Create(mCurrentInput);
+    fNode.SetNode(fToken);
+    mLogicalStack.Add(fNode);
 end;
 
 procedure TJsTokenWorker.OnceOr( fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var fToken : TJsToken; fNode : TJsTokenNOde;
 begin
+	if ( fRules(mCurrentInput) = True ) then begin
+        fToken := fTokenStringWorker(mCurrentInput);  
+        fNode := TJsTokenNode.Create(mCurrentInput);
+        fNode.SetNode(fToken);
+        mLogicalStack.Add(fNode);
+	end;
 
 end;
 
 
 procedure TJsTokenWorker.Many( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var fSave : TJsTokenNode;
 begin
-
+    while True do begin
+        fSave := self.mToken;
+        Once( fTokenWorker, fRules );
+        if ( Length(mToken.mInput) >= Length(fSave.mInput) ) then begin
+            mToken := fSave;
+            break;
+        end; 
+        
+        if ( Length(mToken.mInput) = 0 ) then
+            break;
+    end;
 end;
 
 procedure TJsTokenWorker.Many( fTokenWorker : TJsFuncTokenNodeWorker );
+var fSave : TJsTokenNode;
 begin
-
+    while True do begin
+        fSave := self.mToken;
+        Once( fTokenWorker );
+        if ( Length(mToken.mInput) >= Length(fSave.mInput) ) then begin
+            mToken := fSave;
+            break;
+        end; 
+        
+        if ( Length(mToken.mInput) = 0 ) then
+            break;
+    end;
 end;
 
-procedure TJsTokenWorker.Many(fTokenStringWorker : TJsFuncStringWorker);
-begin
 
+procedure TJsTokenWorker.Many(fTokenStringWorker : TJsFuncStringWorker);
+var fSave : TJsTokenNode;
+begin
+    while True do begin
+        fSave := self.mToken;
+        Once( fTokenStringWorker );
+        if ( Length(mToken.mInput) >= Length(fSave.mInput) ) then begin
+            mToken := fSave;
+            break;
+        end; 
+        
+        if ( Length(mToken.mInput) = 0 ) then
+            break;
+    end;
 end;
 
 procedure TJsTokenWorker.Many( fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var fSave : TJsTokenNode;
 begin
-
+    while True do begin
+        fSave := self.mToken;
+        Once( fTokenStringWorker,fRules );
+        if ( Length(mToken.mInput) >= Length(fSave.mInput) ) then begin
+            mToken := fSave;
+            break;
+        end; 
+        
+        if ( Length(mToken.mInput) = 0 ) then
+            break;
+    end;
 end;
 
 procedure TJsTokenWorker.ManyOr( fTokenWorker : TJsFuncTokenNodeWorker; fRules : TJsFuncRuleNode);
+var fSave, fCurr : TJsTokenNode; fLast : String;
 begin
-
+    fSave := TJsTokenNode.Create(self.mCurrentInput);
+    fCurr := TJsTokenNode.Create(self.mCurrentInput);
+    fLast := self.mCurrentInput;
+    while True do begin
+        
+        if fRules(fSave.Input) = False then
+            break;
+            
+        fCurr := fTokenWorker(fSave.Input);
+        if ( Length(fSave.mInput) >= Length(fCurr.Input) ) then begin
+            break;
+        end; 
+        
+        if ( Length(fSave.mInput) = 0 ) then
+            break;
+            
+        fSave.Add(fCurr);
+        fSave.Input := fCurr.Input;
+            
+    end;
+    mLogicalStack.Add(fSave);
 end;
 
 procedure TJsTokenWorker.ManyOr( fTokenWorker : TJsFuncTokenNodeWorker );
+var fSave, fCurr : TJsTokenNode; fLast : String;
 begin
+    fSave := TJsTokenNode.Create(self.mCurrentInput);
+    fCurr := TJsTokenNode.Create(self.mCurrentInput);
+    fLast := self.mCurrentInput;
+    while True do begin
+        
+        fCurr := fTokenWorker(fSave.Input);
+        if ( Length(fSave.mInput) >= Length(fCurr.Input) ) then begin
+            break;
+        end; 
+        
+        if ( Length(fSave.mInput) = 0 ) then
+            break;
+            
+        fSave.Add(fCurr);
+        fSave.Input := fCurr.Input;
+            
+    end;
+    mLogicalStack.Add(fSave);
 
 end;
 
 procedure TJsTokenWorker.ManyOr(fTokenStringWorker : TJsFuncStringWorker);
+var fSave : TJsTokenNode; fLast : String; fCurr : TJsToken;
 begin
+    fSave := TJsTokenNode.Create(self.mCurrentInput);
+    fLast := self.mCurrentInput;
+    while True do begin
+        
+        fCurr := fTokenStringWorker(fSave.Input);
+        if ( Length(fSave.mInput) >= Length(fCurr.Input) ) then begin
+            break;
+        end; 
+        
+        if ( Length(fSave.mInput) = 0 ) then
+            break;
+            
+        fSave.Add(fCurr);
+        fSave.Input := fCurr.Input;
+            
+    end;
+    mLogicalStack.Add(fSave);
+
 
 end;
 
 procedure TJsTokenWorker.ManyOr( fTokenStringWorker : TJsFuncStringWorker; fRules : TJsFuncRuleNode  );
+var fSave : TJsTokenNode; fLast : String; fCurr : TJsToken;
 begin
+    fSave := TJsTokenNode.Create(self.mCurrentInput);
+    fLast := self.mCurrentInput;
+    while True do begin
+       
+        if fRules(fSave.Input) = False then
+            break;         
+        
+        fCurr := fTokenStringWorker(fSave.Input);
+             
+        
+        if ( Length(fSave.mInput) >= Length(fCurr.Input) ) then begin
+            break;
+        end; 
+        
+        if ( Length(fSave.mInput) = 0 ) then
+            break;
+            
+        fSave.Add(fCurr);
+        fSave.Input := fCurr.Input;
+            
+    end;
+    mLogicalStack.Add(fSave);
+end;
 
+    function SortByInput ( A,B : Pointer ): Integer;
+    var t1,t2 : TJsTokenNode;
+    begin
+        t1 := TJsTokenNode(A);
+        t2 := TJsTokenNode(B);
+        result := Length(t1.Input) - Length(t2.Input);  
+    end;
+
+procedure TJsTokenWorker.Logic;
+var fSortedList : TList; I,J,K : Integer; fNode : TJsTokenNode; fToken : TJsToken;
+    fArray : TJsTokenNodeArray;
+begin
+    fArray := mLogicalStack.GetArray;
+    for I := 0 to Length(fArray) - 1 do begin
+        fSortedList.Add(fArray[I]);
+    end;
+    fSortedList.Sort(SortByInput);
+    
+    fNode := TJsTokenNode(fSortedList[0]);
+    mToken.Add(fNode);
+    mToken.Input := fNode.Input;
+    
+    
+    mLogicalStack.Clear;
 end;
 
 
@@ -374,26 +690,43 @@ begin
     mToken := TJsTokenNode.Create(fInput);
 end;
 
-function TJsTokenWorker.Work( fInput : String ): TJsTokenNode;
+function TJsTokenWorker.Work( fInput : String ): TJsTokenNode; 
 begin
     mInput := fInput;
-    Force(); // Come to the dark side - We've cookies!
+    Parse(); // Come to the dark side - We've cookies!
     result := mToken;
 end;
 
 function TJsTokenWorker.Work : TJsTokenNode;
 begin
-    Force;
+    Parse;
     result := mToken;
 end;
 
 
 //Token Node
 
+
 constructor TJsTokenNode.Create( fInput : String );
 begin
     self.mInput := fInput;
     self.mLeafs := TList.Create;
+end;
+
+
+function TJsTokennode.GetLeafs : TList;
+begin
+    result := mLeafs;
+end;
+
+function TJsTokenNode.GetToken : TJsToken;
+begin
+    result := mToken;
+end;
+
+function TJsTokenNode.GetInput : String;
+begin
+    result := mInput;
 end;
 
 procedure TJsTokenNode.Add( fTokenNode : TJsTokenNode );
@@ -405,7 +738,7 @@ procedure TJsTokenNode.Add( fToken : TJsToken );
 var fTokenNode : TJsTokenNode;
 begin
 
-    fTokenNode := TJsTokenNode.Create('');
+    fTokenNode := TJsTokenNode.Create(fToken.Input);
     fTokenNode.SetNode( fToken );
     self.Add( fTokenNode );
 end;
@@ -445,6 +778,11 @@ end;
 function TJsTokenNodeList.GetArray : TJsTokenNodeArray;
 begin
     result := mTokens;
+end;
+
+procedure TJsTokenNodeList.Clear;
+begin
+    mTokens := niL;
 end;
 
 
