@@ -34,8 +34,8 @@ type
 	    
 	    
 	        property Input : String read mInput write mInput;
-	        property Token : String read mToken;
-	        property TokenId : Integer read mTokenId;
+	        property Token : String read mToken write mToken;
+	        property TokenId : Integer read mTokenId write mTokenId;
 	        property TokenType : TJsTokenType read mTokenType;
 		
 	end;

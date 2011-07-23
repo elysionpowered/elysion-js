@@ -16,37 +16,27 @@ implementation
 
 
 function from( List : String; Input : String ): String;
-	function _included( ch : Char; _str : String ): Boolean;
-	var I : integer;
-	begin
-	
-		result := false;
-	
-		for I := 0 to Length( _str ) - 1 do 
-		begin
-			if (ch = _str[i]) then
-			begin
-				result := true;
-				break;
-			end;
-		end;
-		
-		
-	end;
-	
-	function _fromLoop( fInp : String; fWork : String ): String;
-	begin
-		if _included(head(fInp),List) then
-		begin
-			_fromLoop( tail(fInp), fWork + head(fInp) );
-		end else begin
-			result := fWork;
-		end;
-	end;
-	
+var Work : String; I,J : Integer; Found : Boolean;
 begin
 
-	result := _fromLoop( Input, '' ); 
+        for I := 0 to Length(Input) do begin
+                Found := false;
+                for J := 0 to Length(List) do begin
+                        if ( List[J] = Input[I] ) then begin
+                                Found := true;
+                                break;
+                        end;
+                end;
+                
+                if Found = True then begin
+                        Work := Work + Input[I];
+                end else begin
+                        result := Work;
+                        break;
+                end;
+        end;
+        
+        result := Work;
 
 end;
 
@@ -55,7 +45,7 @@ function from( fChar : Char; Input : String ): String;
 	begin
 		if head(fInp) = fChar then
 		begin
-			_fromLoop( tail(fInp), fWork + head(fInp) );
+			result := _fromLoop( tail(fInp), fWork + head(fInp) );
 		end else begin
 			result := fWork;
 		end;
@@ -70,8 +60,8 @@ function tail( Str : String ): String;
 	function getString : String;
 	var I : Integer;
 	begin
-		for I := 1 to Length(Str) - 1 do begin
-			result := Str[i];
+		for I := 2 to Length(Str)  do begin
+			result := result + Str[i];
 		end;
 	end;
 begin
@@ -84,27 +74,15 @@ begin
 end;
 
 function drop( Str : String; Len : Integer ): String;
-	function _subDrop( _str : String; _len : Integer; _work : String ): String;
-	begin
-	        if (_str = '') then begin
-	                result := _work;
-                        exit;
-	        end;
-		if (_len = 0) and (_str = '' ) then begin
-			result := _work;
-			exit;
-		end;
-		if (_len = 0 ) then begin
-		        result := _work;
-		        exit;
-		end;
-		if (_len > 0 ) then
-			_subDrop( tail(_str), _len - 1, _work );
-		
-		_subDrop( tail(_str), _len - 1, _work + _str[1] );
-	end;
+var I : Integer; Work : String;
 begin
-	result := _subDrop( Str, Len, '' );
+        for I := 0 to Length(Str) do  begin
+                if ( I >= Len ) then begin
+                        Work := Work + Str[I];
+                end;
+        end;
+        
+        result := Work;
 end;
 
 function take( Str : STring; Len : Integer ): String;
