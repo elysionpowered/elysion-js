@@ -11,31 +11,43 @@ function take( Str : STring; Len : Integer ): String;
 function from( List : String; Input : String ): String;overload;
 function from( fChar : Char; Input : String ): String;overload;
 
+function ShrinkSpaces( Str : String ): String;
+
 implementation
 
 
 
 function from( List : String; Input : String ): String;
-var Work : String; I,J : Integer; Found : Boolean;
+var Work, Inp : String; I,J : Integer; Found : Boolean;
 begin
-
+        Work := '';
+        Input := ShrinkSpaces(Input);
+        
         for I := 0 to Length(Input) do begin
-                Found := false;
-                for J := 0 to Length(List) do begin
-                        if ( List[J] = Input[I] ) then begin
-                                Found := true;
+                if ( Input[I] = ' ' ) then begin
+                        
+                        if ( Length(Work) > 0 ) then begin
+                                WriteLn(Work);
                                 break;
                         end;
-                end;
                 
-                if Found = True then begin
-                        Work := Work + Input[I];
-                end else begin
-                        result := Work;
-                        break;
+                end else begin    
+                        Found := false;
+                        for J := 0 to Length(List) do begin
+                                if ( List[J] = Input[I] ) then begin
+                                        Found := true;
+                                        break;
+                                end;
+                        end;
+                        
+                        if Found = True then begin
+                                Work := Work + Input[I];
+                        end else begin
+                                break;
+                        end;                        
                 end;
         end;
-        
+     
         result := Work;
 
 end;
@@ -43,11 +55,14 @@ end;
 function from( fChar : Char; Input : String ): String;
 	function _fromLoop( fInp : String; fWork : String ): String;
 	begin
-		if head(fInp) = fChar then
+		if (head(fInp) = fChar) then
 		begin
 			result := _fromLoop( tail(fInp), fWork + head(fInp) );
 		end else begin
-			result := fWork;
+		        if ( head(fInp) = ' ') and ( Length(fWork) = 0) then
+		                result := _fromLoop( tail(fInp), fWork )
+		        else
+			        result := fWork;
 		end;
 	end;
 	
@@ -55,6 +70,26 @@ begin
 	result := _fromLoop( Input, '' ); 
 end;
 
+
+function ShrinkSpaces( str : String ): String;
+var I : Integer; Work : String;
+begin
+        Work := '';
+        for I := 1 to Length(Str) do begin
+                if (Str[I] <> ' ') then begin
+                        Work := Work + Str[I];
+                end else begin
+                        if Length(Work) > 1 then begin
+                                break;
+                        end;
+                end;
+        end;
+        
+        if  I > 1 then
+         Result := Work + Drop(str,I)
+        else
+         Result := Work;
+end;
 
 function tail( Str : String ): String;
 	function getString : String;
@@ -76,8 +111,9 @@ end;
 function drop( Str : String; Len : Integer ): String;
 var I : Integer; Work : String;
 begin
+        Work := '';
         for I := 0 to Length(Str) do  begin
-                if ( I >= Len ) then begin
+                if ( I > Len ) then begin
                         Work := Work + Str[I];
                 end;
         end;

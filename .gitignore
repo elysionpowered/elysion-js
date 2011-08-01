@@ -1,3 +1,6 @@
+*.ppi
+*.pupu
+*.blub
 *.ppu
 *.o
 *.exe
